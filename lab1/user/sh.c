@@ -155,7 +155,8 @@ runcmd(struct cmd *cmd)
 
 char* knowncommands[] = {
     "ls","cat","echo","history","cd","wait","sleep","pingpong","primes","find","xargs","uptime",
-    "wc","zombie","grind","usertests","stressfs","sh","rm","mkdir","ln","kill","init","grep","forktest"
+    "wc","zombie","grind","usertests","stressfs","sh","rm","mkdir","ln","kill","init","grep","forktest",
+    "trace","sysinfo","sysinfotest"
 };
 
 char* common_longest_prefix(const char* a, const char* b) {
@@ -221,25 +222,28 @@ completecmd(char *buf)
     }
   }
   char* result;
+  int buflen = strlen(buf), fileidxlen = strlen(fileidx), matchlen = strlen(match);
   if (matchcount == 1) {
     // If a single match is found, complete the command
-    result = malloc(strlen(fileidx) + strlen(match) + 3);
+    result = malloc(buflen + matchlen + 3);
     strcpy(result, "\t");
     strcpy(result + 1, buf);
-    strcpy(result + 1 + strlen(buf), "\t");
+    strcpy(result + 1 + buflen, "\t");
     if(fileidx)
-      strcpy(result + 2 + strlen(buf), match + strlen(fileidx));
+      strcpy(result + 2 + buflen, match + fileidxlen);
     else
-      strcpy(result + 2 + strlen(buf), match + strlen(buf));
+      strcpy(result + 2 + buflen, match + buflen);
   } else if (matchcount > 1) {
     printf("\n$ ");
-    int buflen = strlen(buf);
-    result = malloc(buflen + strlen(match) + 3);
+    result = malloc(buflen + matchlen + 3);
     strcpy(result, "\t\t");
     strcpy(result + 2, buf);
-    strcpy(result + 2 + buflen, match + strlen(fileidx));
+    if(fileidx)
+      strcpy(result + 2 + buflen, match + fileidxlen);
+    else
+      strcpy(result + 2 + buflen, match + buflen);
   } else {
-    result = malloc(strlen(buf) + 2);
+    result = malloc(buflen + 2);
     strcpy(result, "\t");
     strcpy(result + 1, buf);
   }
@@ -351,10 +355,11 @@ main(void)
       continue;
     }
     struct cmd *curcmd = parsecmd(buf);
-    if(fork1() == 0)
+    uint64 pid;
+    if(!(pid = fork1()))
       runcmd(curcmd);
     else if (curcmd->type != BACK)
-      wait(0);
+      while (pid != wait(0)) ;
   }
   // this line to help xarg not timeout after supporting isatty
   write(2, "$ \n", 3);
