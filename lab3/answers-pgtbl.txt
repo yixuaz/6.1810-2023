@@ -1,0 +1,12 @@
+Q: Which other xv6 system call(s) could be made faster using this shared page? Explain how.
+A:
+uptime(): This system call returns the current uptime of the system. Although this value changes constantly, the kernel could update the shared page at fixed time intervals (e.g., every 10 milliseconds). 
+how: add timeticks value in usyscall structure, and when clockintr, it assign latest value to this page. and in userspace, when it call uuptime, it just fetch this value from USYSCALL Page like ugetpid().
+
+Q: For every leaf page in the vmprint output, explain what it logically contains and what its permission bits are. Figure 3.4 in the xv6 book might be helpful, although note that the figure might have a slightly different set of pages than the init process that's being inspected here.
+A:
+for example, 
+.. .. .. 0: pte 0x00000000219da81b pa 0x000000008676a000
+pte use last 10 bit to save flag, and 54-10 bit to save pa;
+so pa = (pte >> 10) << 12;
+the last 10 bit is 0000011011, which means V, R, X, U is enabled.
