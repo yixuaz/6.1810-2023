@@ -1,0 +1,32 @@
+Q：Which registers contain arguments to functions? For example, which register holds 13 in main's call to printf?
+A：
+a0, a1…, a7 contain arguments to functions. In this case, it is a2 that holds 13.
+
+Q：Where is the call to function f in the assembly code for main? Where is the call to g? (Hint: the compiler may inline functions.)
+A:
+g's assembly code is same as f.
+ 26:	45b1                	li	a1,12
+From above we can tell that the compiler directly calculates the result of “f(8)+1=12” and stores it in a1.
+
+Q: At what address is the function printf located?
+A: 
+the instruction jalr rd, offset(rs1) will store the value of pc+4 in rd.
+If rd is ra instead, the instruction essentially becomes a function call.
+Otherwise, it is just a simple jump.
+current PC is 0x34, 0x34 + 4 = 0x38
+So in this case the value in ra after jalr to printf is 0x38.
+
+Q: What is the output?
+A: He110 World
+unsigned int i = 0x726c6400
+57616 will always be 0xe110 no matter the RISC-V is little-endian or big-endian
+
+Q:
+In the following code, what is going to be printed after 'y='? (note: the answer is not a specific value.) Why does this happen?
+printf("x=%d y=%d", 3);
+A: 
+The printed value for y is undefined. 
+Before calling printf, the compiler will place the input parameters into registers a0-a7. 
+When jumping to printf, the values are then read from the registers. 
+However, since we did not specify a value for the second placeholder, a2 was not modified. 
+Therefore, the value of y printed out is an arbitrary value that was present in a2 before the function call.
