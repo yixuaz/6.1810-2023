@@ -1,0 +1,25 @@
+1. Looking at the backtrace output, which function called syscall?
+usertrap() at kernel/trap.c
+
+2. What is the value of p->trapframe->a7 and what does that value represent?
+ p->trapframe->a7 is 7, #define SYS_exec    7
+
+3. What was the previous mode that the CPU was in?
+the value was 0, which means previous mode was supervisor mode
+SPP bit is the 8th bit of the sstatus register
+sstatus: 00100010
+
+4. Write down the assembly instruction the kernel is panicing at. Which register corresponds to the variable num?
+  // num = p->trapframe->a7;
+  num = * (int *) 0;
+    80002052:	00002683          	lw	a3,0(zero) # 0 <_entry-0x80000000>
+so a3
+
+5. Why does the kernel crash?
+According to RISC-V privileged instructions, the value 13 here represents a load page fault. 
+In particular, an error occurred while loading data from memory address 0 into a3
+address 0 does not map to the kernel space
+
+
+6. What is the name of the binary that was running when the kernel paniced? What is its process id (pid)?
+initcode; 1

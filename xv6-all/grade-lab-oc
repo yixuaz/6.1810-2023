@@ -1,0 +1,210 @@
+#!/usr/bin/env python3
+
+import os
+import re
+import subprocess
+from gradelib import *
+
+r = Runner(save("xv6.out"))
+
+@test(0, "running lab1(util) oc")
+def test_lab1_oc():
+    r.run_qemu(shell_script([
+        'uptime',
+        'find . ^.h$',
+        'history'
+    ]))
+
+@test(5, "uptime", parent=test_lab1_oc)
+def test_uptime():
+    matches = re.findall("^ticks: \d+$", r.qemu.output, re.M)
+    assert_equal(len(matches), 1, "ticks work") 
+
+@test(5, "find", parent=test_lab1_oc)
+def test_find():
+    matches = re.findall("^\.\/sh$", r.qemu.output, re.M)
+    assert_equal(len(matches), 1, "find grep work")     
+
+@test(10, "history", parent=test_lab1_oc)
+def test_find():
+    matches = re.findall("^1 uptime$", r.qemu.output, re.M)
+    assert_equal(len(matches), 1, "history work") 
+    matches = re.findall("^3 history$", r.qemu.output, re.M)
+    assert_equal(len(matches), 1, "history work") 
+
+@test(0, "running lab2(syscall) oc")
+def test_lab2_oc():
+    r.run_qemu(shell_script([
+        'trace 32 grep hello README',
+        'sysinfo',
+    ]))
+
+@test(5, "trace", parent=test_lab2_oc)
+def test_trace():
+    matches = re.findall("^\d: syscall read -> \d+ ,params: \d \d+ \d+ $", r.qemu.output, re.M)
+    assert_equal(len(matches), 4, "trace parameter work")
+
+@test(5, "loadavg", parent=test_lab2_oc)
+def test_loadavg():
+    matches = re.findall("^\d+ \d+ \d+$", r.qemu.output, re.M)
+    assert_equal(len(matches), 1, "load average work")  
+
+
+@test(0, "running lab3(pagetable) oc")
+def test_lab3_oc():
+    r.run_qemu(shell_script([
+        'nulltest',
+        'suppgtest',
+        'dirtypages'
+    ]))
+
+@test(10, "nulltest", parent=test_lab3_oc)
+def test_null():
+    matches = re.findall("usertrap()", r.qemu.output, re.M)
+    assert_equal(len(matches), 1, "null work")
+
+@test(25, "suppgtest", parent=test_lab3_oc)
+def test_suppg():
+    matches = re.findall('.*pa 0x0000000088000000$', r.qemu.output, re.M)
+    assert_equal(len(matches), 2, "super page 1 work")
+    matches = re.findall('.*pa 0x0000000088200000$', r.qemu.output, re.M)
+    assert_equal(len(matches), 3, "super page 2 work")
+    r.match('^sup page test pass$')
+
+@test(5, "dirtypages", parent=test_lab3_oc)
+def test_dirtypages():
+    matches = re.findall("^7: pte", r.qemu.output, re.M)
+    assert_equal(len(matches), 2, "dirty page 1 work")
+    matches = re.findall("^9: pte", r.qemu.output, re.M)
+    assert_equal(len(matches), 2, "dirty page 2 work") 
+
+@test(0, "running lab4(trap) oc")
+def test_lab4_oc():
+    r.run_qemu(shell_script([
+        'bttest'
+    ]))
+
+@test(20, "bttest", parent=test_lab4_oc)
+def test_backtrace():
+    r.match('.*sys_testbacktrace.*\d+$') and \
+    r.match('.*syscall.*\d+$') and \
+    r.match('.*usertrap.*\d+$')
+
+@test(0, "running lab5(copy on write) oc")
+def test_lab5_oc():
+    r.run_qemu(shell_script([
+        'cowtest'
+    ]))
+
+@test(30, "cowtest", parent=test_lab5_oc)
+def test_cow():
+    svpages = re.findall(r'saved pages: (\d+)', r.qemu.output)
+    svpages = [int(n) for n in svpages]
+    assert_equal(True, all(n > 0 for n in svpages) and \
+     all(svpages[i] < svpages[i+1] for i in range(len(svpages)-1)))
+    r.match('^ALL COW TESTS PASSED$')
+
+@test(0, "running lab6(thread) oc")
+def test_lab6_oc():
+    r.run_qemu(shell_script([
+        'threadtest',
+        'uthreadtest',
+        'kthreadtest'
+    ]))
+
+@test(50, "threadtest", parent=test_lab6_oc)
+def test_thread():
+    matches = re.findall("^TEST\d+ PASSED$", r.qemu.output, re.M)
+    assert_equal(len(matches), 29, "thread test work")
+
+@test(0, "running lab7(net) oc")
+def test_lab7_oc():
+    r.run_qemu(shell_script([
+        'ping 10.0.2.2',
+        'wget www.example.com',
+    ]))
+
+@test(10, "icmptest", parent=test_lab7_oc)
+def test_icmp():
+    matches = re.findall("^\d+ bytes from 10.0.2.2 : icmp_seq=\d ttl=255 time=\d ticks$", r.qemu.output, re.M)
+    assert_equal(len(matches), 3, "icmp test work")
+
+@test(50, "tcptest", parent=test_lab7_oc)
+def test_tcp():
+    matches = re.findall("^HTTP\/1\.1 200 OK", r.qemu.output, re.M)
+    assert_equal(len(matches), 1, "tcp test work")
+
+@test(0, "running lab8(lock) oc")
+def test_lab8_oc():
+    r.run_qemu(shell_script([
+        'bcachetest'
+    ]))
+
+@test(30, "lockfree test: test", parent=test_lab8_oc)
+def test_lockfree_test():
+    matches = re.findall("^lock: bcache", r.qemu.output, re.M)
+    assert_equal(len(matches), 0, "lock-free test work")
+    matches = re.findall("^tot= 0", r.qemu.output, re.M)
+    assert_equal(len(matches), 1, "lock-free test work")
+    r.match('^test0: OK$')
+
+@test(10, "lockfree test2: test", parent=test_lab8_oc)
+def test_lockfree_test2():
+    r.match('^test1 OK$')
+
+@test(0, "running lab10(mmap) oc")
+def test_lab10_oc():
+    r.run_qemu(shell_script([
+        'mmaptest',
+        'swaptest'
+    ]))
+
+@test(20, "shared test: test", parent=test_lab10_oc)
+def test_shared_mmap_test():
+    r.match('^shared_test OK$')
+
+@test(30, "swap test: test", parent=test_lab10_oc)
+def test_swap_test():
+    r.match('^swaptest: all tests succeeded$')
+
+
+@test(0, "signal oc")
+def test_signal_oc():
+    r.run_qemu(shell_script([
+        'signaltest'
+    ]))
+
+@test(5, "ignore signal: test", parent=test_signal_oc)
+def signal_ignore_test():
+    r.match('^test signal ignore: ok$')
+
+@test(5, "procmask signal: test", parent=test_signal_oc)
+def signal_procmask_test():
+    r.match('^test signal proc mask: ok$')
+
+@test(10, "fork signal: test", parent=test_signal_oc)
+def test_fork_signal_test():
+    r.match('^test signal fork: ok$')
+
+@test(0, "procfs oc")
+def test_procfs_oc():
+    r.run_qemu(shell_script([
+        'procfstest'
+    ]))
+
+@test(10, "verify procfs dir: test", parent=test_procfs_oc)
+def verify_proc_fs_test():
+    r.match('^procfs verify dir done; ok$')
+
+@test(10, "cat proc 1 status: test", parent=test_signal_oc)
+def cat_procfs_status_test():
+    r.match('^procfs cat proc 1 status done; ok$')
+
+@test(50, "usertests")
+def test_usertests():
+    r.run_qemu(shell_script([
+        'usertests'
+    ]), timeout=600)
+    r.match('^ALL TESTS PASSED$')
+
+run_tests()

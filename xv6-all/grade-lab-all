@@ -1,0 +1,463 @@
+#!/usr/bin/env python3
+
+import os
+import re
+import subprocess
+from gradelib import *
+
+r = Runner(save("xv6.out"))
+
+@test(0, "running cowtest")
+def test_cowtest():
+    r.run_qemu(shell_script([
+        'cowtest'
+    ]))
+
+@test(30, "simple", parent=test_cowtest)
+def test_simple():
+    matches = re.findall("^simple: ok$", r.qemu.output, re.M)
+    assert_equal(len(matches), 2, "Number of appearances of 'simple: ok'")
+
+@test(30, "three", parent=test_cowtest)
+def test_three():
+    matches = re.findall("^three: ok$", r.qemu.output, re.M)
+    assert_equal(len(matches), 3, "Number of appearances of 'three: ok'")
+
+@test(20, "file", parent=test_cowtest)
+def test_file():
+    r.match('^file: ok$')
+
+@test(20, "usertests")
+def test_usertests():
+    r.run_qemu(shell_script([
+        'usertests -q'
+    ]), timeout=120)
+    r.match('^ALL TESTS PASSED$')
+
+def usertest_check(testcase, nextcase, output):
+    if not re.search(r'\ntest {}: [\s\S]*OK\ntest {}'.format(testcase, nextcase), output):
+        raise AssertionError('Failed ' + testcase)
+
+@test(5, "usertests: copyin", parent=test_usertests)
+def test_sbrkbugs():
+    usertest_check("copyin", "copyout", r.qemu.output)
+
+@test(5, "usertests: copyout", parent=test_usertests)
+def test_sbrkbugs():
+    usertest_check("copyout", "copyinstr1", r.qemu.output)
+
+@test(19, "usertests: all tests", parent=test_usertests)
+def test_usertests_all():
+    r.match('^ALL TESTS PASSED$')
+
+@test(1, "time")
+def test_time():
+    check_time()
+
+@test(40, "running bigfile")
+def test_bigfile():
+    r.run_qemu(shell_script([
+        'bigfile'
+    ]), timeout=180)
+    r.match('^wrote 11275 blocks$')
+    r.match('^bigfile done; ok$')
+
+@test(0, "running symlinktest")
+def test_symlinktest():
+    r.run_qemu(shell_script([
+        'symlinktest'
+    ]), timeout=20)
+
+@test(20, "symlinktest: symlinks", parent=test_symlinktest)
+def test_symlinktest_symlinks():
+    r.match("^test symlinks: ok$")
+
+@test(20, "symlinktest: concurrent symlinks", parent=test_symlinktest)
+def test_symlinktest_symlinks():
+    r.match("^test concurrent symlinks: ok$")
+
+@test(0, "running kalloctest")
+def test_kalloctest():
+    r.run_qemu(shell_script([
+        'kalloctest'
+    ]), timeout=200)
+    
+@test(10, "kalloctest: test1", parent=test_kalloctest)
+def test_kalloctest_test1():
+    r.match('^test1 OK$')
+    
+@test(10, "kalloctest: test2", parent=test_kalloctest)
+def test_kalloctest_test2():
+    r.match('^test2 OK$')
+
+@test(10, "kalloctest: test3", parent=test_kalloctest)
+def test_kalloctest_test3():
+    r.match('^test3 OK$')
+
+@test(10, "kalloctest: sbrkmuch")
+def test_sbrkmuch():
+    r.run_qemu(shell_script([
+        'usertests sbrkmuch'
+    ]), timeout=90)
+    r.match('^ALL TESTS PASSED$')
+
+@test(0, "running bcachetest")
+def test_bcachetest():
+    r.run_qemu(shell_script([
+        'bcachetest'
+    ]), timeout=90)
+    
+@test(10, "bcachetest: test0", parent=test_bcachetest)
+def test_bcachetest_test0():
+    r.match('^test0: OK$')
+    
+@test(10, "bcachetest: test1", parent=test_bcachetest)
+def test_bcachetest_test1():
+    r.match('^test1 OK$')
+
+@test(0, "running mmaptest")
+def test_mmaptest():
+    r.run_qemu(shell_script([
+        'mmaptest'
+    ]), timeout=180)
+
+@test(20, "mmaptest: mmap f", parent=test_mmaptest)
+def test_mmaptest_mmap_f():
+    r.match('^test mmap f: OK$')
+
+@test(10, "mmaptest: mmap private", parent=test_mmaptest)
+def test_mmaptest_mmap_private():
+    r.match('^test mmap private: OK$')
+
+@test(10, "mmaptest: mmap read-only", parent=test_mmaptest)
+def test_mmaptest_mmap_readonly():
+    r.match('^test mmap read-only: OK$')
+
+@test(10, "mmaptest: mmap read/write", parent=test_mmaptest)
+def test_mmaptest_mmap_readwrite():
+    r.match('^test mmap read/write: OK$')
+
+@test(10, "mmaptest: mmap dirty", parent=test_mmaptest)
+def test_mmaptest_mmap_dirty():
+    r.match('^test mmap dirty: OK$')
+
+@test(10, "mmaptest: not-mapped unmap", parent=test_mmaptest)
+def test_mmaptest_mmap_unmap():
+    r.match('^test not-mapped unmap: OK$')
+
+@test(10, "mmaptest: two files", parent=test_mmaptest)
+def test_mmaptest_mmap_two():
+    r.match('^test mmap two files: OK$')
+
+@test(40, "mmaptest: fork_test", parent=test_mmaptest)
+def test_mmaptest_fork_test():
+    r.match('^fork_test OK$')    
+
+@test(0, "running nettests")
+def test_nettest():
+    server = subprocess.Popen(["make", "server"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    r.run_qemu(shell_script([
+        'nettests'
+    ]), timeout=30)
+    server.terminate()
+    server.communicate()
+
+@test(40, "nettest: ping", parent=test_nettest)
+def test_nettest_():
+    r.match('^testing ping: OK$')
+
+@test(20, "nettest: single process", parent=test_nettest)
+def test_nettest_():
+    r.match('^testing single-process pings: OK$')
+
+@test(20, "nettest: multi-process", parent=test_nettest)
+def test_nettest_fork_test():
+    r.match('^testing multi-process pings: OK$')
+
+@test(20, "nettest: DNS", parent=test_nettest)
+def test_nettest_dns_test():
+    r.match('^DNS OK$')
+
+PTE_PRINT = """page table 0x0000000087f6b000
+ ..0: pte 0x0000000021fd9c01 pa 0x0000000087f67000
+ .. ..0: pte 0x0000000021fd9801 pa 0x0000000087f66000
+ .. .. ..1: pte 0x0000000021fd9417 pa 0x0000000087f65000
+ .. .. ..4: pte 0x0000000021fd9007 pa 0x0000000087f64000
+ .. .. ..5: pte 0x0000000021fd8c17 pa 0x0000000087f63000
+ ..255: pte 0x0000000021fda801 pa 0x0000000087f6a000
+ .. ..511: pte 0x0000000021fda401 pa 0x0000000087f69000
+ .. .. ..509: pte 0x0000000021fdcc13 pa 0x0000000087f73000
+ .. .. ..510: pte 0x0000000021fdd007 pa 0x0000000087f74000
+ .. .. ..511: pte 0x0000000020001c0b pa 0x0000000080007000"""
+
+VAL_RE = "(0x00000000[0-9a-f]+)"
+INDENT_RE = r"\s*\.\.\s*"
+INDENT_ESC = "\\\s*\.\.\\\s*"
+
+@test(0, "pgtbltest")
+def test_pgtbltest():
+    r.run_qemu(shell_script([
+        'pgtbltest'
+    ]), timeout=300)
+
+@test(10, "pgtbltest: ugetpid", parent=test_pgtbltest)
+def test_nettest_():
+    r.match('^ugetpid_test: OK$')
+
+@test(10, "pgtbltest: pgaccess", parent=test_pgtbltest)
+def test_nettest_():
+    r.match('^pgaccess_test: OK$')
+
+@test(10, "pte printout")
+def test_pteprint():
+    first = True
+    r.run_qemu(shell_script([
+        'vmprint 0',
+        'echo hi'
+    ]))
+    r.match('^hi')
+    p = re.compile(VAL_RE)
+    d = re.compile(INDENT_RE)
+    for l in PTE_PRINT.splitlines():
+        l = d.sub(INDENT_ESC, l)
+        l = p.sub(VAL_RE, l)
+        r.match(r'^{}$'.format(l))
+        if first:
+            first = False
+        else:
+            matches = re.findall(r'^{}$'.format(l), r.qemu.output, re.MULTILINE)
+            assert_equal(len(matches[0]), 2)
+            pa = (int(matches[0][0], 16) >> 10) << 12
+            assert_equal(int(matches[0][1], 16), pa)
+
+@test(5, "answers-pgtbl.txt")
+def test_answers():
+    # just a simple sanity check, will be graded manually
+    check_answers("answers-pgtbl.txt")
+
+@test(5, "answers-syscall.txt")
+def test_answers():
+    # just a simple sanity check, will be graded manually
+    check_answers("answers-syscall.txt")
+
+@test(5, "trace 32 grep")
+def test_trace_32_grep():
+    r.run_qemu(shell_script([
+        'trace 32 grep hello README'
+    ]))
+    r.match('^\\d+: syscall read -> 1023')
+    r.match('^\\d+: syscall read -> 961')
+    r.match('^\\d+: syscall read -> 321')
+    r.match('^\\d+: syscall read -> 0')
+
+@test(5, "trace all grep")
+def test_trace_all_grep():
+    r.run_qemu(shell_script([
+        'trace 2147483647 grep hello README'
+    ]))
+    r.match('^\\d+: syscall trace -> 0')
+    r.match('^\\d+: syscall exec -> 3')
+    r.match('^\\d+: syscall open -> 3')
+    r.match('^\\d+: syscall read -> 1023')
+    r.match('^\\d+: syscall read -> 961')
+    r.match('^\\d+: syscall read -> 321')
+    r.match('^\\d+: syscall read -> 0')
+    r.match('^\\d+: syscall close -> 0')
+
+@test(5, "trace nothing")
+def test_trace_nothing():
+    r.run_qemu(shell_script([
+        'grep hello README'
+    ]))
+    r.match(no=[".* syscall .*"])
+
+@test(5, "trace children")
+def test_trace_children():
+    r.run_qemu(shell_script([
+        'trace 2 usertests forkforkfork'
+    ]))
+    r.match('3: syscall fork -> 4')
+    r.match('^5: syscall fork -> \\d+')
+    r.match('^6: syscall fork -> \\d+')
+    r.match('^\\d+: syscall fork -> -1')
+    r.match('^ALL TESTS PASSED')
+
+@test(15, "sysinfotest")
+def test_sysinfotest():
+    r.run_qemu(shell_script([
+        'sysinfotest'
+    ]))
+    r.match('^sysinfotest: OK', no=[".* FAIL .*"])
+
+@test(20, "uthread")
+def test_uthread():
+    r.run_qemu(shell_script([
+        'uthread'
+    ]))
+    expected = ['thread_a started', 'thread_b started', 'thread_c started']
+    expected.extend(['thread_%s %d' % (tid, n) for n in range(100) for tid in ('c', 'a', 'b')])
+    expected.extend(['thread_c: exit after 100', 'thread_a: exit after 100', 'thread_b: exit after 100'])
+    expected.append('thread_schedule: no runnable threads')
+    if not re.findall('\n'.join(expected), r.qemu.output, re.M):
+        raise AssertionError('Output does not match expected output')
+
+# test the first ph task: add locks to eliminate the missing keys.
+@test(10, "ph_safe")
+def test_ph_safe():
+    subprocess.run(['make', 'ph'], check=True)
+    result = subprocess.run(['./ph', '2'], stdout=subprocess.PIPE, check=True)
+    out = result.stdout.decode("utf-8")
+    matches = re.findall(r'^\d+: (\d+) keys missing$', out, re.MULTILINE)
+    assert_equal(len(matches), 2)
+    assert_equal(int(matches[0]), 0)
+    assert_equal(int(matches[1]), 0)
+
+# test the second ph task: locking that allows put() parallelism
+@test(10, "ph_fast")
+def test_ph_fast():
+    subprocess.run(['make', 'ph'], check=True)
+    result = subprocess.run(['./ph', '2'], stdout=subprocess.PIPE, check=True)
+    out = result.stdout.decode("utf-8")
+    rate2 = re.findall(r' (\d+) puts.second$', out, re.MULTILINE)
+    assert_equal(len(rate2), 1)
+    result = subprocess.run(['./ph', '1'], stdout=subprocess.PIPE)
+    out = result.stdout.decode("utf-8")
+    rate1 = re.findall(r' (\d+) puts.second$', out, re.MULTILINE)
+    assert_equal(len(rate1), 1)
+    rate1 = float(rate1[0])
+    rate2 = float(rate2[0])
+    # demand that 2 threads yield at least 1.25x the
+    # throughput of a single thread.
+    if rate2 < 1.25 * rate1:
+        raise AssertionError('Parallel put() speedup is less than 1.25x')
+
+@test(15, "barrier")
+def test_barrier():
+    subprocess.run(['make', 'barrier'])
+    result = subprocess.run(['./barrier', '2'], stdout=subprocess.PIPE)
+    out = result.stdout.decode("utf-8")
+    if not re.match(r'^OK; passed$', out):
+        raise AssertionError('Barrier failed')
+
+BACKTRACE_RE = r"^(0x000000008[0-9a-f]+)"
+
+def addr2line():
+    for f in ['riscv64-unknown-elf-addr2line', 'riscv64-linux-gnu-addr2line', 'addr2line', ]:
+        try:
+            devnull = open(os.devnull)
+            subprocess.Popen([f], stdout=devnull, stderr=devnull).communicate()
+            return f
+        except OSError:
+            continue
+    raise AssertionError('Cannot find the addr2line program')
+
+@test(10, "backtrace test")
+def test_backtracetest():
+    r.run_qemu(shell_script([
+        'bttest'
+    ]))
+    a2l = addr2line()
+    matches = re.findall(BACKTRACE_RE, r.qemu.output, re.MULTILINE)
+    assert_equal(len(matches), 3)
+    files = ['sysproc.c', 'syscall.c', 'trap.c']
+    for f, m in zip(files, matches):
+        result = subprocess.run([a2l, '-e', 'kernel/kernel', m], stdout=subprocess.PIPE)
+        if not f in result.stdout.decode("utf-8"):
+            raise AssertionError('Trace is incorrect; no %s' % f)
+
+@test(0, "running alarmtest")
+def test_alarmtest():
+    r.run_qemu(shell_script([
+        'alarmtest'
+    ]))
+
+@test(20, "alarmtest: test0", parent=test_alarmtest)
+def test_alarmtest_test0():
+    r.match('^test0 passed$')
+
+@test(20, "alarmtest: test1", parent=test_alarmtest)
+def test_alarmtest_test1():
+    r.match('^\\.?test1 passed$')
+
+@test(10, "alarmtest: test2", parent=test_alarmtest)
+def test_alarmtest_test2():
+    r.match('^\\.?test2 passed$')
+
+@test(10, "alarmtest: test3", parent=test_alarmtest)
+def test_alarmtest_test3():
+    r.match('^test3 passed$')
+
+@test(5, "sleep, no arguments")
+def test_sleep_no_args():
+    r.run_qemu(shell_script([
+        'sleep'
+    ]))
+    r.match(no=["exec .* failed", "$ sleep\n$"])
+
+@test(5, "sleep, returns")
+def test_sleep_no_args():
+    r.run_qemu(shell_script([
+        'sleep',
+        'echo OK'
+    ]))
+    r.match('^OK$', no=["exec .* failed", "$ sleep\n$"])
+
+@test(10, "sleep, makes syscall")
+def test_sleep():
+    r.run_qemu(shell_script([
+        'sleep 10',
+        'echo FAIL'
+    ]), stop_breakpoint('sys_sleep'))
+    r.match('\\$ sleep 10', no=['FAIL'])
+
+@test(20, "pingpong")
+def test_pingpong():
+    r.run_qemu(shell_script([
+        'pingpong', 'echo OK'
+    ]))
+    r.match('^\\d+: received ping$', '^\\d+: received pong$', '^OK$')
+
+@test(20, "primes")
+def test_primes():
+    r.run_qemu(shell_script([
+        'primes', 'echo OK'
+    ]))
+    args = ['prime %d' % i for i in [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31]]
+    args.append('^OK$')
+    r.match(*args)
+
+@test(10, "find, in current directory")
+def test_find_curdir():
+    fn = random_str()
+    r.run_qemu(shell_script([
+        'echo > %s' % fn,
+        'find . %s' % fn
+    ]))
+    r.match('./%s' % fn)
+
+@test(10, "find, recursive")
+def test_find_recursive():
+    needle = random_str()
+    dirs = [random_str() for _ in range(3)]
+    r.run_qemu(shell_script([
+        'mkdir %s' % dirs[0],
+        'echo > %s/%s' % (dirs[0], needle),
+        'mkdir %s/%s' % (dirs[0], dirs[1]),
+        'echo > %s/%s/%s' % (dirs[0], dirs[1], needle),
+        'mkdir %s' % dirs[2],
+        'echo > %s/%s' % (dirs[2], needle),
+        'find . %s' % needle
+    ]))
+    r.match('./%s/%s' % (dirs[0], needle),
+            './%s/%s/%s' % (dirs[0], dirs[1], needle),
+            './%s/%s' % (dirs[2], needle))
+
+@test(20, "xargs")
+def test_xargs():
+    r.run_qemu(shell_script([
+        'sh < xargstest.sh'
+    ]))
+    matches = re.findall("hello", r.qemu.output)
+    assert_equal(len(matches), 3, "Number of appearances of 'hello'")
+
+run_tests()
