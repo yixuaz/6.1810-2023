@@ -23,7 +23,8 @@ I wrote a lot of test cases for each optional challenge task `./grade-lab-oc` to
 - [x] Write an uptime program that prints the uptime in terms of ticks using the uptime system call. (easy)
 - [x] Support regular expressions in name matching for find. grep.c has some primitive support for regular expressions. (easy)
 - [x] The xv6 shell (user/sh.c) is just another user program and you can improve it. It is a minimal shell and lacks many features found in real shell. For example, modify the shell to not print a $ when processing shell commands from a file (moderate), modify the shell to support wait (easy), modify the shell to support lists of commands, separated by ";" (moderate), modify the shell to support sub-shells by implementing "(" and ")" (moderate), modify the shell to support tab completion (easy), modify the shell to keep a history of passed shell commands (moderate), or anything else you would like your shell to do. (If you are very ambitious, you may have to modify the kernel to support the kernel features you need; xv6 doesn't support much.)
-![lab1oc](https://github.com/yixuaz/6.1810-2023/assets/19387492/457cbf74-c4f0-44f3-89fa-2eb46aa31636)
+![lab1oc](https://github.com/yixuaz/6.1810-2023/assets/19387492/f96e08b4-8b28-495d-b1c1-60f0ca2b1d28)
+
 
 ### Lab 2 (syscall)
 - [x] Print the system call arguments for traced system calls (easy).
