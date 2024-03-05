@@ -162,7 +162,7 @@ char* knowncommands[] = {
 char* common_longest_prefix(const char* a, const char* b) {
     int len = 0;
     while (a[len] && a[len] == b[len]) len++;
-    char* prefix = (char*) malloc(strlen(a));
+    char* prefix = (char*) malloc(1 + strlen(a));
     strcpy(prefix, a);
     prefix[len] = '\0';
     return prefix;
@@ -192,7 +192,7 @@ completecmd(char *buf)
             free(match);
             match = newmatch;
           } else {
-            char *copy = malloc(strlen(dir.name));
+            char *copy = malloc(1 + strlen(dir.name));
             strcpy(copy, dir.name);
             match = copy;
             matchcount = 1;
@@ -213,7 +213,7 @@ completecmd(char *buf)
           free(match);
           match = newmatch;
         } else {
-          char *copy = malloc(strlen(knowncommands[i]));
+          char *copy = malloc(1 + strlen(knowncommands[i]));
           strcpy(copy, knowncommands[i]);
           match = copy;
           matchcount = 1;

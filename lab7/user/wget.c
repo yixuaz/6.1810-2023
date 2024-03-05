@@ -9,30 +9,6 @@
 #define URI_MAX_LEN 128
 #define PATH_MAX_LEN 64
 
-int static parseURL(const char *url, char *uri, char *path) {
-  int urllen = strlen(url);
-  const char *path_start = strchr(url, '/');
-
-  if (path_start == 0) {
-    if (urllen >= URI_MAX_LEN) return -1;
-    strncpy(uri, url, urllen);
-    uri[urllen] = '\0'; // Ensuring null-termination
-    path[0] = '/';
-    path[1] = '\0';
-    return 0;
-  }
-
-  int urilen = path_start - url;
-  if (urilen >= URI_MAX_LEN) return -1;
-  strncpy(uri, url, urilen);
-  uri[urilen] = '\0';
-
-  int pathlen = strlen(path_start);
-  if (pathlen >= PATH_MAX_LEN) return -1;
-  strncpy(path, path_start, pathlen);
-  path[pathlen] = '\0';
-  return 0;
-}
 void static buildHTTPGet(char *request, char *uri, char *path)
 {
   #define GET_PART "GET "
@@ -60,7 +36,7 @@ main(int argc, char *argv[])
   }
 
   char uri[URI_MAX_LEN], path[PATH_MAX_LEN];
-  parseURL(argv[1], uri, path);
+  parseURL(argv[1], uri, path, URI_MAX_LEN, PATH_MAX_LEN);
   printf("path %s, uri: %s\n", path, uri);
   uint32 server_ip = gethostbyname(uri); 
 

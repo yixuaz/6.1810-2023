@@ -179,6 +179,7 @@ struct dns_question {
 } __attribute__((packed));
   
 #define ARECORD (0x0001)
+#define CNAME   (0x0005)
 #define QCLASS  (0x0001)
 
 struct dns_data {
@@ -191,6 +192,7 @@ struct dns_data {
 #define SOCK_HASHTABLE_SIZE    128
 #define SOCK_STREAM 1
 #define SOCK_DGRAM  2
+#define SOCK_RAW    3
 #define SOCK_CLIENT 1
 #define SOCK_SERVER 0
 

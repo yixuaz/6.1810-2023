@@ -8,6 +8,7 @@
 #define E1000_ICR      (0x000C0/4)  /* Interrupt Cause Read - R */
 #define E1000_ICS      (0x000C8/4)  /* Interrupt Cause Set - R */
 #define E1000_IMS      (0x000D0/4)  /* Interrupt Mask Set - RW */
+#define E1000_IMC      (0x000D8/4)  /* Interrupt Mask Clear - RW */
 #define E1000_RCTL     (0x00100/4)  /* RX Control - RW */
 #define E1000_TCTL     (0x00400/4)  /* TX Control - RW */
 #define E1000_TIPG     (0x00410/4)  /* TX Inter-packet gap -RW */

@@ -53,3 +53,4 @@ int memcmp(const void *, const void *, uint);
 void *memcpy(void *, const void *, uint);
 int statistics(void*, int);
 uint32 gethostbyname(char *);
+int parseURL(const char *, char *, char *, int, int);

@@ -431,17 +431,24 @@ copyout(pagetable_t pagetable, uint64 dstva, char *src, uint64 len)
 {
   uint64 n, va0, pa0;
   pte_t *pte;
-  int suppg = dstva >= SUPSTART;
-  int pgsize = suppg ? SUPPGSIZE : PGSIZE;
+  int suppg = 0;
+  
   while(len > 0){
-    va0 = suppg ? SUPPGROUNDDOWN(dstva) : PGROUNDDOWN(dstva);
+    va0 = PGROUNDDOWN(dstva);
     if(va0 >= MAXVA)
       return -1;  
     pte = walk(pagetable, va0, 0);
     if(pte == 0 || (*pte & PTE_V) == 0 || (*pte & PTE_U) == 0 ||
-       (*pte & PTE_W) == 0)
-      return -1;
+       (*pte & PTE_W) == 0) {
+      va0 = SUPPGROUNDDOWN(dstva);
+      pte = walk(pagetable, va0, 0);
+      if(pte == 0 || (*pte & PTE_V) == 0 || (*pte & PTE_U) == 0 ||
+       (*pte & PTE_W) == 0 || PTE2PA(*pte) < SUPSTART)
+        return -1;
+      suppg = 1;  
+    }
     pa0 = PTE2PA(*pte);
+    int pgsize = suppg ? SUPPGSIZE : PGSIZE;
     n = pgsize - (dstva - va0);
     if(n > len)
       n = len;
@@ -462,13 +469,17 @@ copyin(pagetable_t pagetable, char *dst, uint64 srcva, uint64 len)
 {
   uint64 n, va0, pa0;
   
-  int suppg = srcva >= SUPSTART;
-  int pgsize = suppg ? SUPPGSIZE : PGSIZE;
+  int suppg = 0;
   while(len > 0){
-    va0 = suppg ? SUPPGROUNDDOWN(srcva) : PGROUNDDOWN(srcva);
+    va0 = PGROUNDDOWN(srcva);
     pa0 = walkaddr(pagetable, va0);
-    if(pa0 == 0)
-      return -1;
+    if(pa0 == 0) {
+      va0 = SUPPGROUNDDOWN(srcva);
+      pa0 = walkaddr(pagetable, va0);
+      if (pa0 == 0 || pa0 < SUPSTART) return -1;
+      suppg = 1;
+    }
+    int pgsize = suppg ? SUPPGSIZE : PGSIZE;  
     n = pgsize - (srcva - va0);
     if(n > len)
       n = len;
@@ -490,14 +501,18 @@ copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
 {
   uint64 n, va0, pa0;
   int got_null = 0;
-  int suppg = srcva >= SUPSTART;
-  int pgsize = suppg ? SUPPGSIZE : PGSIZE;
+  int suppg = 0;
   
   while(got_null == 0 && max > 0){
-    va0 = suppg ? SUPPGROUNDDOWN(srcva) : PGROUNDDOWN(srcva);
+    va0 = PGROUNDDOWN(srcva);
     pa0 = walkaddr(pagetable, va0);
-    if(pa0 == 0)
-      return -1;
+    if(pa0 == 0) {
+      va0 = SUPPGROUNDDOWN(srcva);
+      pa0 = walkaddr(pagetable, va0);
+      if (pa0 == 0 || pa0 < SUPSTART) return -1;
+      suppg = 1;
+    }
+    int pgsize = suppg ? SUPPGSIZE : PGSIZE;  
     n = pgsize - (srcva - va0);
     if(n > max)
       n = max;

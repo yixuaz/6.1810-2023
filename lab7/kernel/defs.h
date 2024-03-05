@@ -260,6 +260,9 @@ int             tcp_api_close(struct sock *);
 int             tcp_api_receive(struct sock *, uint64, int, struct proc *);
 void            net_rx_tcp(struct mbuf *, uint16, struct ip *);
 
+// icmp.c
+void            net_tx_icmp(struct mbuf *m, int rip);
+void            net_rx_icmp(struct mbuf *m, uint16 len, struct ip *iphdr);
 // sysfile.c
 int      argfd(int, int *, struct file **);
 int      fdalloc(struct file *);

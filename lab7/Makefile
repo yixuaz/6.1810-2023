@@ -58,6 +58,7 @@ OBJS += \
 	$K/sysnet.o \
 	$K/syssock.o \
 	$K/tcp.o \
+	$K/icmp.o \
 	$K/rand.o \
 	$K/pci.o
 endif
@@ -195,6 +196,7 @@ UPROGS=\
 	$U/_tcpclient\
 	$U/_wget\
 	$U/_tcpechoserver\
+	$U/_ping\
 
 
 ifeq ($(LAB),$(filter $(LAB), lock))

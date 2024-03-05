@@ -143,6 +143,8 @@ dns_rep(uint8 *ibuf, int cc)
       printf("%d.%d.%d.%d\n", ip[0], ip[1], ip[2], ip[3]);
       res = ip;
       len += 4;
+    } else if(ntohs(d->type) == CNAME) {
+      len += ntohs(d->len);
     }
   }
 
@@ -173,6 +175,31 @@ dns_rep(uint8 *ibuf, int cc)
     exit(1);
   }
   return res;
+}
+
+int parseURL(const char *url, char *uri, char *path, int uri_max_len, int path_max_len) {
+  int urllen = strlen(url);
+  const char *path_start = strchr(url, '/');
+
+  if (path_start == 0) {
+    if (urllen >= uri_max_len) return -1;
+    strncpy(uri, url, urllen);
+    uri[urllen] = '\0'; // Ensuring null-termination
+    path[0] = '/';
+    path[1] = '\0';
+    return 0;
+  }
+
+  int urilen = path_start - url;
+  if (urilen >= uri_max_len) return -1;
+  strncpy(uri, url, urilen);
+  uri[urilen] = '\0';
+
+  int pathlen = strlen(path_start);
+  if (pathlen >= path_max_len) return -1;
+  strncpy(path, path_start, pathlen);
+  path[pathlen] = '\0';
+  return 0;
 }
 
 uint32 gethostbyname(char *url)

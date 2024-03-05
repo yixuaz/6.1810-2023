@@ -296,8 +296,10 @@ sockwrite1(struct sock *si, uint64 addr, int n, int rip, int rport)
   if (si->type == SOCK_STREAM) {
     // don't consider n > bufsize
     return tcp_api_send(m, si, TCP_FLG_PSH | TCP_FLG_ACK, n);
-  } else {
+  } else if (si->type == SOCK_DGRAM) {
     net_tx_udp(m, rip, si->lport, rport);
+  } else {
+    net_tx_icmp(m, rip);
   }
   return n;
 }

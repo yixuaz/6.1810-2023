@@ -107,7 +107,7 @@ allocpid()
 // and return with p->lock held.
 // If there are no free procs, or a memory allocation fails, return 0.
 static struct proc*
-allocproc(void)
+allocproc(int isthread)
 {
   struct proc *p;
 
@@ -132,12 +132,15 @@ found:
     return 0;
   }
 
-  // An empty user page table.
-  p->pagetable = proc_pagetable(p);
-  if(p->pagetable == 0){
-    freeproc(p);
-    release(&p->lock);
-    return 0;
+  if (!isthread) {
+    // An empty user page table.
+    p->pagetable = proc_pagetable(p);
+    if(p->pagetable == 0){
+      freeproc(p);
+      release(&p->lock);
+      return 0;
+    }
+    initlock(&p->trapframe->tshared.tlock, "tlock");
   }
 
   // Set up new context to start executing at forkret,
@@ -147,10 +150,10 @@ found:
   p->context.sp = p->kstack + PGSIZE;
 
   // setup thread related variable
-  initlock(&p->trapframe->tshared.tlock, "tlock");
+  
   p->tshared = &p->trapframe->tshared;
   p->trap_va = TRAPFRAME;
-  p->isthread = 0;
+  p->isthread = isthread;
 
   return p;
 }
@@ -244,7 +247,7 @@ userinit(void)
 {
   struct proc *p;
 
-  p = allocproc();
+  p = allocproc(0);
   initproc = p;
   
   // allocate one user page and copy initcode's instructions
@@ -296,7 +299,7 @@ fork(void)
   struct proc *p = myproc();
 
   // Allocate process.
-  if((np = allocproc()) == 0){
+  if((np = allocproc(0)) == 0){
     return -1;
   }
 
@@ -349,11 +352,10 @@ clone(void(*fcn)(void*, void*), void *arg1, void *arg2, void *stack)
     return -1;
 
   // Allocate process.
-  if((np = allocproc()) == 0){
+  if((np = allocproc(1)) == 0){
     return -1;
   }
-  // mark this process is thread
-  np->isthread = 1;
+
   // use same page table as parent, to keep same memory space
   np->pagetable = p->pagetable;
   // share some variable between threads
@@ -391,6 +393,7 @@ clone(void(*fcn)(void*, void*), void *arg1, void *arg2, void *stack)
   }
   // failed to find a space
   if (trap_va >= TRAPFRAME) {
+    freeproc(np);
     release(&np->lock);
     return -1;
   }

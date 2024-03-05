@@ -476,7 +476,9 @@ net_rx_ip(struct mbuf *m)
     net_rx_udp(m, len, iphdr);
   else if (iphdr->ip_p == IPPROTO_TCP)
     net_rx_tcp(m, len, iphdr);
-  else 
+  else if (iphdr->ip_p == IPPROTO_ICMP)
+    net_rx_icmp(m, len, iphdr);
+  else
     goto fail;  
   return;
 

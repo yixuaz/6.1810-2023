@@ -271,6 +271,9 @@ e1000_recv(void)
 void
 e1000_intr(void)
 {
+  // avoid live lock -> disable recieve interrupt
+  regs[E1000_IMC] = E1000_RXDW; 
+
   // tell the e1000 we've seen this interrupt;
   // without this the e1000 won't raise any
   // further interrupts.
@@ -282,4 +285,7 @@ e1000_intr(void)
     e1000_send();
   if (reg & E1000_RXDW)
     e1000_recv();
+
+  // reenable receive and transmit interrupt after finished reading all
+  regs[E1000_IMS] = E1000_RXDW | E1000_TXDW;   
 }
