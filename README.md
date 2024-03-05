@@ -32,7 +32,7 @@ I wrote a lot of test cases for each optional challenge task `./grade-lab-oc` to
 <img width="304" alt="1709649011150" src="https://github.com/yixuaz/6.1810-2023/assets/19387492/795a08b2-61aa-4568-a4f2-30126fcd714f">
       
 ### Lab 3 (pgtbl)
-- [x] Use super-pages to reduce the number of PTEs in page tables. (to avoid break other tests, only `mmap` is allowed to use super page)
+- [x] Use super-pages to reduce the number of PTEs in page tables. (**to avoid break other tests, only `mmap` is allowed to use super page**)
 - [x] Unmap the first page of a user process so that dereferencing a null pointer will result in a fault. You will have to change user.ld to start the user text segment at, for example, 4096, instead of 0.
 Add a system call that reports dirty pages (modified pages) using PTE_D.
 <img width="377" alt="1709649070351" src="https://github.com/yixuaz/6.1810-2023/assets/19387492/c31a23c7-957f-42ed-af36-f55fcfe507f4">
